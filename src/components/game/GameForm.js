@@ -3,7 +3,7 @@ import { GameContext } from "./GameProvider.js"
 
 
 export const GameForm = props => {
-    const { createGame, getGameTypes, gameTypes } = useContext(GameContext)
+    const { createGame, getGameTypes, gameTypes, getGame, editGame } = useContext(GameContext)
 
     /*
         Since the input fields are bound to the values of
@@ -25,6 +25,20 @@ export const GameForm = props => {
     useEffect(() => {
         getGameTypes()
     }, [])
+
+    useEffect(() => {
+        if ("gameId" in props.match.params) {
+            getGame(props.match.params.gameId).then(game => {
+                setCurrentGame({
+                    skillLevel: game.skill_level,
+                    numberOfPlayers: game.number_of_players,
+                    title: game.title,
+                    gameTypeId: game.gametype_id,
+                    maker: game.maker
+                })
+            })
+        }
+    }, [props.match.params.gameId])
 
     /*
         Update the `currentGame` state variable every time
@@ -68,11 +82,18 @@ export const GameForm = props => {
             </fieldset>
             <fieldset>
                 <div className="form-group">
-                    <label htmlFor="gameTypeId">game type id: </label>
-                    <input type="text" name="gameTypeId" required autoFocus className="form-control"
+                    <label htmlFor="gameTypeId">Game Type: </label>
+                    <select name="gameTypeId" className="form-control"
                         value={currentGame.gameTypeId}
-                        onChange={handleControlledInputChange}
-                    />
+                        onChange={handleControlledInputChange}>
+                        <option value="0">Select a type</option>
+                        {
+                            gameTypes.map(type => (
+                                <option key={type.id} value={type.id}>{type.label}</option>
+                            ))
+                        }
+
+                    </select>
                 </div>
             </fieldset>
             <fieldset>
@@ -85,26 +106,39 @@ export const GameForm = props => {
                 </div>
             </fieldset>
 
-            {/* You create the rest of the input fields for each game property */}
+            {
+                ("gameId" in props.match.params)
+                    ? <button
+                        onClick={evt => {
+                            // Prevent form from being submitted
+                            evt.preventDefault()
+                            editGame({
+                                id: props.match.params.gameId,
+                                maker: currentGame.maker,
+                                title: currentGame.title,
+                                numberOfPlayers: parseInt(currentGame.numberOfPlayers),
+                                skillLevel: parseInt(currentGame.skillLevel),
+                                gameTypeId: parseInt(currentGame.gameTypeId)
+                            })
+                                .then(() => props.history.push("/games"))
+                        }}
+                        className="btn btn-primary">Edit</button>
+                    : <button type="submit"
+                        onClick={evt => {
+                            // Prevent form from being submitted
+                            evt.preventDefault()
 
-            <button type="submit"
-                onClick={evt => {
-                    // Prevent form from being submitted
-                    evt.preventDefault()
+                                createGame({
+                                maker: currentGame.maker,
+                                title: currentGame.title,
+                                numberOfPlayers: parseInt(currentGame.numberOfPlayers),
+                                skillLevel: parseInt(currentGame.skillLevel),
+                                gameTypeId: parseInt(currentGame.gameTypeId)
+                            })
 
-                    const game = {
-                        maker: currentGame.maker,
-                        title: currentGame.title,
-                        numberOfPlayers: parseInt(currentGame.numberOfPlayers),
-                        skillLevel: parseInt(currentGame.skillLevel),
-                        gameTypeId: parseInt(currentGame.gameTypeId)
-                    }
-
-                    // Send POST request to your API
-                    createGame(game)
-                    props.history.push({ pathname: "/" })
-                }}
-                className="btn btn-primary">Create</button>
+                        }}
+                        className="btn btn-primary">Create</button>
+            }
         </form>
     )
 }
